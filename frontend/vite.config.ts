@@ -1,9 +1,13 @@
 
-  import { defineConfig } from 'vite';
-  import react from '@vitejs/plugin-react-swc';
-  import path from 'path';
+import { defineConfig, loadEnv } from 'vite';
+import react from '@vitejs/plugin-react-swc';
+import path from 'path';
 
-  export default defineConfig({
+export default defineConfig(({ mode }) => {
+  // Load env file based on `mode` in the current directory
+  const env = loadEnv(mode, process.cwd(), '');
+
+  return {
     plugins: [react()],
     resolve: {
       extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],
@@ -56,5 +60,20 @@
     server: {
       port: 3000,
       open: true,
+      // Proxy API requests to the backend server
+      proxy: {
+        '/api': {
+          target: env.VITE_API_BASE_URL || 'http://localhost:5000',
+          changeOrigin: true,
+          secure: false,
+        rewrite: (path) => path.replace(/^\/api/, ''),
+        },
+      },
     },
-  });
+    // Define global constants
+    define: {
+      'process.env': {},
+      '__APP_ENV__': JSON.stringify(env.VITE_APP_ENV || 'development'),
+    },
+  };
+});

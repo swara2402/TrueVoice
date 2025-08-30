@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardHeader, CardContent } from './ui/card';
 import { Badge } from './ui/badge';
-import { Heart, User, Calendar } from 'lucide-react';
+import { Heart, User, Calendar, ThumbsUp, Zap } from 'lucide-react';
+import { api, API_CONFIG, buildApiUrl } from '../config/api';
 
 interface Blog {
   id: number;
@@ -10,8 +11,15 @@ interface Blog {
   author: string;
   date: string;
   likes: number;
+  claps: number;
+  hearts: number;
   published: boolean;
   tags: string[];
+  userReactions?: {
+    liked: boolean;
+    clapped: boolean;
+    hearted: boolean;
+  };
 }
 
 interface BlogCardProps {
@@ -20,6 +28,14 @@ interface BlogCardProps {
 }
 
 export function BlogCard({ blog, variant = 'default' }: BlogCardProps) {
+  const [liked, setLiked] = useState(blog.userReactions?.liked || false);
+  const [clapped, setClapped] = useState(blog.userReactions?.clapped || false);
+  const [hearted, setHearted] = useState(blog.userReactions?.hearted || false);
+
+  const [likesCount, setLikesCount] = useState(blog.likes);
+  const [clapsCount, setClapsCount] = useState(blog.claps || 0);
+  const [heartsCount, setHeartsCount] = useState(blog.hearts || 0);
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', { 
@@ -27,6 +43,47 @@ export function BlogCard({ blog, variant = 'default' }: BlogCardProps) {
       day: 'numeric',
       year: 'numeric'
     });
+  };
+
+  const handleReaction = async (type: 'like' | 'clap' | 'heart') => {
+    // Toggle reaction state
+    let newState = false;
+    if (type === 'like') {
+      newState = !liked;
+      setLiked(newState);
+      setLikesCount(likesCount + (newState ? 1 : -1));
+    } else if (type === 'clap') {
+      newState = !clapped;
+      setClapped(newState);
+      setClapsCount(clapsCount + (newState ? 1 : -1));
+    } else if (type === 'heart') {
+      newState = !hearted;
+      setHearted(newState);
+      setHeartsCount(heartsCount + (newState ? 1 : -1));
+    }
+
+    // Call backend API to update reaction using centralized API
+    try {
+      const url = buildApiUrl(API_CONFIG.ENDPOINTS.BLOG_REACTIONS(blog.id));
+      if (newState) {
+        await api.post(url, { reactionType: type });
+      } else {
+        await api.delete(url);
+      }
+    } catch (error) {
+      // Revert state on error
+      if (type === 'like') {
+        setLiked(!newState);
+        setLikesCount(likesCount + (newState ? -1 : 1));
+      } else if (type === 'clap') {
+        setClapped(!newState);
+        setClapsCount(clapsCount + (newState ? -1 : 1));
+      } else if (type === 'heart') {
+        setHearted(!newState);
+        setHeartsCount(heartsCount + (newState ? -1 : 1));
+      }
+      console.error('Failed to update reaction:', error);
+    }
   };
 
   return (
@@ -77,9 +134,37 @@ export function BlogCard({ blog, variant = 'default' }: BlogCardProps) {
             </div>
           </div>
           
-          <div className="flex items-center text-red-500">
-            <Heart className="h-4 w-4 mr-1" />
-            <span className="font-medium">{blog.likes}</span>
+          <div className="flex items-center space-x-4">
+            <button
+              onClick={() => handleReaction('like')}
+              aria-label="Like"
+              className={`flex items-center text-red-500 focus:outline-none ${
+                liked ? 'text-red-600' : 'text-red-400'
+              }`}
+            >
+              <Heart className="h-4 w-4 mr-1" />
+              <span className="font-medium">{likesCount}</span>
+            </button>
+            <button
+              onClick={() => handleReaction('clap')}
+              aria-label="Clap"
+              className={`flex items-center text-yellow-500 focus:outline-none ${
+                clapped ? 'text-yellow-600' : 'text-yellow-400'
+              }`}
+            >
+              <ThumbsUp className="h-4 w-4 mr-1" />
+              <span className="font-medium">{clapsCount}</span>
+            </button>
+            <button
+              onClick={() => handleReaction('heart')}
+              aria-label="Heart"
+              className={`flex items-center text-pink-500 focus:outline-none ${
+                hearted ? 'text-pink-600' : 'text-pink-400'
+              }`}
+            >
+              <Zap className="h-4 w-4 mr-1" />
+              <span className="font-medium">{heartsCount}</span>
+            </button>
           </div>
         </div>
       </CardContent>

@@ -1,12 +1,42 @@
 import React, { useState } from 'react';
 import { Card, CardHeader, CardContent } from './ui/card';
 import { Input } from './ui/input';
-import { Textarea } from './ui/textarea';
 import { Button } from './ui/button';
 import { Label } from './ui/label';
 import { Badge } from './ui/badge';
 import { PlusCircle, X, Send } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
+
+// Quill editor modules configuration
+const modules = {
+  toolbar: [
+    [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+    [{ 'font': [] }],
+    [{ 'size': ['small', false, 'large', 'huge'] }],
+    ['bold', 'italic', 'underline', 'strike'],
+    [{ 'color': [] }, { 'background': [] }],
+    [{ 'script': 'sub'}, { 'script': 'super' }],
+    [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+    [{ 'indent': '-1'}, { 'indent': '+1' }],
+    [{ 'align': [] }],
+    ['blockquote', 'code-block'],
+    ['link', 'image', 'video'],
+    ['clean']
+  ],
+};
+
+const formats = [
+  'header', 'font', 'size',
+  'bold', 'italic', 'underline', 'strike',
+  'color', 'background',
+  'script',
+  'list', 'bullet', 'indent',
+  'align',
+  'blockquote', 'code-block',
+  'link', 'image', 'video'
+];
 
 export function CreateBlogPage() {
   const [title, setTitle] = useState('');
@@ -26,14 +56,14 @@ export function CreateBlogPage() {
     setTags(tags.filter(tag => tag !== tagToRemove));
   };
 
-  const handleTagKeyPress = (e: React.KeyboardEvent) => {
+  const handleTagKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault();
       addTag();
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
     if (!title.trim() || !content.trim()) {
@@ -134,6 +164,7 @@ export function CreateBlogPage() {
                           type="button"
                           onClick={() => removeTag(tag)}
                           className="ml-2 hover:text-indigo-900"
+                          title="Remove tag"
                         >
                           <X className="h-3 w-3" />
                         </button>
@@ -153,16 +184,19 @@ export function CreateBlogPage() {
               <Label htmlFor="content" className="text-base font-medium">
                 Blog Content *
               </Label>
-              <Textarea
-                id="content"
-                required
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                className="mt-2 min-h-[400px] rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500"
-                placeholder="Write your blog content here... You can use Markdown formatting."
-              />
+              <div className="mt-2">
+                <ReactQuill
+                  value={content}
+                  onChange={setContent}
+                  modules={modules}
+                  formats={formats}
+                  placeholder="Write your blog content here... Use the toolbar for formatting, images, and more."
+                  className="rounded-lg border-gray-300 focus:ring-indigo-500 focus:border-indigo-500"
+                  style={{ minHeight: '400px' }}
+                />
+              </div>
               <p className="text-sm text-gray-500 mt-1">
-                {content.length} characters • Markdown formatting supported
+                {content.replace(/<[^>]*>/g, '').length} characters • Rich text formatting supported
               </p>
             </div>
 
